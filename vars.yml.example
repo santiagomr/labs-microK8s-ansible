@@ -1,0 +1,21 @@
+---
+
+microk8s_snap_channel: '1.21'
+
+microk8s_addons_to_enable:
+  - dns
+  - storage
+
+users_list:
+
+  - name: santiagomr
+    password: secret
+    authorized_key: 'ssh-ed25519 AAAAC3NzabdtzdNZLyxa0HIKRx9MX6aptHBQ1xFx3gad7BQ8fvtfaZDlIKBUwcUQh30Y example@santiagomr.com'
+    shell: /bin/bash
+    groups: sudo
+    append: yes
+
+  - name: ubuntu
+    password: secret
+    authorized_key: 'ssh-ed25519 AAAAC3NzabdtzdNZLyxa0HIKRx9MX6aptHBQ1xFx3gad7BQ8fvtfaZDlIKBUwcUQh30Y example@santiagomr.com'
+    groups: sudo

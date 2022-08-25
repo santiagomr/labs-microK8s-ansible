@@ -1,0 +1,45 @@
+---
+# Micro K8s cluster installation and initialization playbook
+# Author: @santiagomr
+
+- name: Master node installation
+  hosts: all
+  become: true
+  gather_facts: yes
+
+  tasks:
+
+    - name: "snap install microk8s --classic --channel={{ microk8s_snap_channel }}"
+      community.general.snap:
+        name: microk8s
+        classic: yes
+        channel: "{{ microk8s_snap_channel }}"
+        state: present
+
+    - block:
+
+      - name: Enable microk8s add-ons
+        ansible.builtin.shell:
+          cmd: "microk8s enable {{ microk8s_addons_to_enable | join(' ') }}"
+        register: enable_addons_result
+        changed_when: '"Enabling" in enable_addons_result.stdout'
+
+      - name: Get cluster join information
+        ansible.builtin.shell:
+          cmd: microk8s add-node | grep 'microk8s join {{ ansible_host }}'
+        changed_when: false
+        run_once: yes
+        register: microk8s_join_command
+
+      when: inventory_hostname == 'node1'
+
+    - block:
+
+      - name: Join worker node to cluster
+        ansible.builtin.shell:
+          cmd: "{{ microk8s_join_command.stdout }}"
+        register: join_result
+        failed_when: join_result.rc not in [0, 6]
+        changed_when: join_result.rc == 0
+
+      when: groups.workers is defined and inventory_hostname in groups.workers

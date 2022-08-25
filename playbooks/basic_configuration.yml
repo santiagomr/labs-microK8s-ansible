@@ -1,0 +1,48 @@
+---
+
+- name: Basic configuration playbook
+  hosts: all
+  become: true
+  gather_facts: no
+
+  tasks:
+
+
+  - name: Set /etc/hosts
+    ansible.builtin.blockinfile:
+      path: /etc/hosts
+      block: |
+        {% for item in groups.all %}
+        {{ hostvars[item]['ansible_host'] }} {{ hostvars[item]['inventory_hostname'] }}
+        {% endfor %}
+
+  - name: Allow SSH root login
+    ansible.builtin.lineinfile:
+      path: /etc/ssh/sshd_config
+      regexp: '^PermitRootLogin'
+      line: PermitRootLogin without-password
+    notify: restart ssh
+
+  - name: Add specified users
+    ansible.builtin.user:
+      name: "{{ item.name }}"
+      password: "{{ item.password | password_hash('sha512', 'idempotencesalt') }}"
+      shell: "{{ item.shell | default(omit) }}"
+      groups: "{{ item.groups | default(omit) }}"
+      append: yes
+    loop: "{{ users_list }}"
+
+  - name: Set authorized key taken from file
+    ansible.posix.authorized_key:
+      user: "{{ item.name }}"
+      key: "{{ item.authorized_key }}"
+      state: present
+    loop: "{{ users_list }}"
+
+
+  handlers:
+
+  - name: restart ssh
+    ansible.builtin.service:
+      name: ssh
+      state: restarted
